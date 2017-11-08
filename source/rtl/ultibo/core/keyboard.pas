@@ -585,6 +585,12 @@ type
   LastReport:TUSBKeyboardReport;         {The last keyboard report received}
   PendingCount:LongWord;                 {Number of USB requests pending for this keyboard}
   WaiterThread:TThreadId;                {Thread waiting for pending requests to complete (for keyboard detachment)}
+{$IFDEF USB_KEYBOARD_OWNCLOCK_REPEAT}
+  OwnClockRepeatTimer:TTimerHandle;
+  LastIndex:Word;
+  LastModifiers:LongWord;
+  PrevCode:Word;
+{$ENDIF}
  end;
  
 {==============================================================================}
@@ -683,6 +689,9 @@ function USBKeyboardCheckReleased(Keyboard:PUSBKeyboardDevice;Report:PUSBKeyboar
 function USBKeyboardDeviceSetLEDs(Keyboard:PUSBKeyboardDevice;LEDs:Byte):LongWord;
 function USBKeyboardDeviceSetIdle(Keyboard:PUSBKeyboardDevice;Duration,ReportId:Byte):LongWord;
 function USBKeyboardDeviceSetProtocol(Keyboard:PUSBKeyboardDevice;Protocol:Byte):LongWord;
+{$IFDEF USB_KEYBOARD_OWNCLOCK_REPEAT}
+procedure USBKeyboardOwnClockRepeatHandler(Ptr:Pointer);
+{$ENDIF}
 
 {==============================================================================}
 {==============================================================================}
@@ -2497,6 +2506,22 @@ begin
  Keyboard.ReportEndpoint:=ReportEndpoint;
  Keyboard.WaiterThread:=INVALID_HANDLE_VALUE;
  
+{$IFDEF USB_KEYBOARD_OWNCLOCK_REPEAT}
+ {Keyboard.OwnClockRepeatTimer}
+ Keyboard.OwnClockRepeatTimer := TimerCreate(Keyboard.Keyboard.KeyboardRate,True,True,@USBKeyboardOwnClockRepeatHandler,Keyboard);
+ if Keyboard.OwnClockRepeatTimer = INVALID_HANDLE_VALUE then
+  begin
+   if USB_LOG_ENABLED then USBLogError(Device,'Keyboard: Failed to create repeat timer for keyboard');
+   
+   {Destroy Keyboard}
+   KeyboardDeviceDestroy(@Keyboard.Keyboard);
+   
+   {Return Result}
+   Result:=USB_STATUS_DEVICE_UNSUPPORTED;
+   Exit;
+  end;
+{$ENDIF}
+
  {Allocate Report Request}
  Keyboard.ReportRequest:=USBRequestAllocate(Device,ReportEndpoint,USBKeyboardReportComplete,USB_HID_BOOT_REPORT_SIZE,Keyboard);
  if Keyboard.ReportRequest = nil then
@@ -2728,6 +2753,11 @@ begin
 
  {Release Report Request}
  USBRequestRelease(Keyboard.ReportRequest);
+
+{$IFDEF USB_KEYBOARD_OWNCLOCK_REPEAT}
+ {}
+ TimerDestroy(Keyboard.OwnClockRepeatTimer);
+{$ENDIF}
  
  {Deregister Keyboard}
  if KeyboardDeviceDeregister(@Keyboard.Keyboard) <> ERROR_SUCCESS then Exit;
@@ -2943,6 +2973,11 @@ begin
                end;                 
              end;
            
+{$IFDEF USB_KEYBOARD_OWNCLOCK_REPEAT}
+             Keyboard.LastIndex:=Index;
+             Keyboard.LastModifiers:=Modifiers;
+{$ENDIF}
+
             {Check Pressed}
             if USBKeyboardCheckPressed(Keyboard,ScanCode) then
              begin
@@ -4802,8 +4837,12 @@ begin
  if Device = nil then Exit;
  
  {Get Duration}
- Duration:=(Duration div 4);
- 
+{$IFDEF USB_KEYBOARD_OWNCLOCK_REPEAT}
+   Duration:=0;
+{$ELSE}
+   Duration:=(Duration div 4);
+{$ENDIF}
+
  {Set Idle}
  Result:=USBControlRequest(Device,nil,USB_HID_REQUEST_SET_IDLE,USB_BMREQUESTTYPE_TYPE_CLASS or USB_BMREQUESTTYPE_DIR_OUT or USB_BMREQUESTTYPE_RECIPIENT_INTERFACE,(Duration shl 8) or ReportId,Keyboard.HIDInterface.Descriptor.bInterfaceNumber,nil,0);
 end;
@@ -4836,6 +4875,68 @@ begin
 end;
 
 {==============================================================================}
+
+{$IFDEF USB_KEYBOARD_OWNCLOCK_REPEAT}
+procedure USBKeyboardOwnClockRepeatHandler(Ptr:Pointer);
+{USBKeyboardOwnClockRepeatHandler}
+{Ptr: Pointer to The USB keyboard device}
+var
+   Keyboard  : PUSBKeyboardDevice;
+   Keymap    : TKeymapHandle;
+   Counter   : Integer;
+   Data      : TKeyboardData;
+begin
+   Keyboard := PUSBKeyboardDevice(Ptr);
+
+  if MutexLock(Keyboard.Keyboard.Lock) = ERROR_SUCCESS then
+  begin
+
+     if USBKeyboardCheckRepeated(Keyboard,Keyboard.PrevCode) then
+     begin
+
+	Keymap:= KeymapGetDefault;
+	Counter:= 0;
+
+	{Get Data}
+	Data.Modifiers:=Keyboard.LastModifiers or KEYBOARD_KEYREPEAT;
+	Data.ScanCode:=Keyboard.LastCode;
+	Data.KeyCode:=KeymapGetKeyCode(Keymap,Data.ScanCode,Keyboard.LastIndex);
+	Data.CharCode:=KeymapGetCharCode(Keymap,Data.KeyCode);
+	Data.CharUnicode:=KeymapGetCharUnicode(Keymap,Data.KeyCode);
+
+	{Insert Data}
+	if USBKeyboardInsertData(Keyboard,@Data) = ERROR_SUCCESS then
+	begin
+	   {Update Count}
+	   Inc(Counter);
+	end;
+
+	{Check Flags}
+        if (Keyboard.Keyboard.Device.DeviceFlags and KEYBOARD_FLAG_DIRECT_READ) = 0 then
+         begin
+          {Global Buffer}
+          {Signal Data Received}
+          SemaphoreSignalEx(KeyboardBuffer.Wait,Counter,nil);
+         end
+        else
+         begin
+          {Direct Buffer}
+          {Signal Data Received}
+          SemaphoreSignalEx(Keyboard.Keyboard.Buffer.Wait,Counter,nil);
+         end;
+
+     end;
+
+     Keyboard.PrevCode := Keyboard.LastCode;
+
+     {Release the Lock}
+     MutexUnlock(Keyboard.Keyboard.Lock);
+  end;
+
+end;
+
+{==============================================================================}
+{$ENDIF}
 {==============================================================================}
 
 initialization
