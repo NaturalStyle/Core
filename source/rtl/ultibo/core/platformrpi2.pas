@@ -1878,7 +1878,8 @@ begin
  Address:=(LongWord(@_data) and ARMV7_L2D_SMALL_BASE_MASK);
  while Address < (LongWord(@_bss_start)) do
   begin
-   ARMv7SetPageTableSmall(Address,Address,ARMV7_L2D_SMALL_CACHE_REMAP_NORMAL_WRITE_ALLOCATE or ARMV7_L2D_FLAG_SHARED or ARMV7_L2D_FLAG_SMALL_XN or ARMV7_L2D_ACCESS_READWRITE);
+   // for IchigoJam BASIC RPi: ARMV7_L2D_FLAG_SMALL_XN removed
+   ARMv7SetPageTableSmall(Address,Address,ARMV7_L2D_SMALL_CACHE_REMAP_NORMAL_WRITE_ALLOCATE or ARMV7_L2D_FLAG_SHARED or ARMV7_L2D_ACCESS_READWRITE);
    Inc(Address,SIZE_4K);
   end;
 
@@ -1886,7 +1887,8 @@ begin
  Address:=(LongWord(@_bss_start) and ARMV7_L2D_SMALL_BASE_MASK);
  while Address < (LongWord(@_bss_end)) do
   begin
-   ARMv7SetPageTableSmall(Address,Address,ARMV7_L2D_SMALL_CACHE_REMAP_NORMAL_WRITE_ALLOCATE or ARMV7_L2D_FLAG_SHARED or ARMV7_L2D_FLAG_SMALL_XN or ARMV7_L2D_ACCESS_READWRITE);
+   // for IchigoJam BASIC RPi: ARMV7_L2D_FLAG_SMALL_XN removed
+   ARMv7SetPageTableSmall(Address,Address,ARMV7_L2D_SMALL_CACHE_REMAP_NORMAL_WRITE_ALLOCATE or ARMV7_L2D_FLAG_SHARED or ARMV7_L2D_ACCESS_READWRITE);
    Inc(Address,SIZE_4K);
   end;
 
