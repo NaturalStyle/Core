@@ -1256,6 +1256,7 @@ const
  BCM2836_BOARD_REVISION_MODEL_COMPUTE3       = (10 shl 4);  {Compute Module 3}
  BCM2836_BOARD_REVISION_MODEL_UNKNOWN_2      = (11 shl 4);  {Unknown}
  BCM2836_BOARD_REVISION_MODEL_ZERO_W         = (12 shl 4);  {Model Zero W (Cannot occur on BCM2836)}
+ BCM2836_BOARD_REVISION_MODEL_3BPLUS         = (13 shl 4);  {Model 3B+}
  
  BCM2836_BOARD_REVISION_PROCESSOR_MASK       = ($F shl 12); {Processor Type}
  BCM2836_BOARD_REVISION_PROCESSOR_BCM2835    = (0 shl 12);  {BCM2835 (Cannot occur on BCM2836)}

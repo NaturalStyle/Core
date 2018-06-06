@@ -4942,7 +4942,7 @@ begin
      GPIO_PIN_45:begin
        {Check Board Type}
        case BoardType of
-        BOARD_TYPE_RPI3B:begin
+        BOARD_TYPE_RPI3B,BOARD_TYPE_RPI3B_PLUS:begin
           {Do Not Set}
           Exit;
          end;
@@ -5057,7 +5057,7 @@ begin
      GPIO_PIN_45:begin
        {Check Board Type}
        case BoardType of
-        BOARD_TYPE_RPI3B:begin
+        BOARD_TYPE_RPI3B,BOARD_TYPE_RPI3B_PLUS:begin
           {Do Not Reset}
          end;
         else 
@@ -6903,12 +6903,13 @@ begin
   end; 
 
  {Enable GPIO Pins}
- if BoardGetType = BOARD_TYPE_RPI3B then
-  begin
-   {On Raspberry Pi 3B UART0 may be connected to the Bluetooth on pins 32 and 33}
-   GPIOFunctionSelect(GPIO_PIN_32,GPIO_FUNCTION_IN);
-   GPIOFunctionSelect(GPIO_PIN_33,GPIO_FUNCTION_IN);
-  end;
+ case BoardGetType of 
+  BOARD_TYPE_RPI3B,BOARD_TYPE_RPI3B_PLUS:begin
+    {On Raspberry Pi 3B/B+ UART0 may be connected to the Bluetooth on pins 32 and 33}
+    GPIOFunctionSelect(GPIO_PIN_32,GPIO_FUNCTION_IN);
+    GPIOFunctionSelect(GPIO_PIN_33,GPIO_FUNCTION_IN);
+   end;
+ end;  
  GPIOPullSelect(GPIO_PIN_14,GPIO_PULL_NONE);
  GPIOFunctionSelect(GPIO_PIN_14,GPIO_FUNCTION_ALT0);
  GPIOPullSelect(GPIO_PIN_15,GPIO_PULL_UP);
