@@ -1,3 +1,7 @@
+*
+!/packages/ultiboutils/
+!/rtl/ultibo/
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db

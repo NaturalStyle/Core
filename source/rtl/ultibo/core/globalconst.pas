@@ -1039,6 +1039,7 @@ const
  BOARD_TYPE_QEMUVPB      = 25; {QEMU Versatile PB}
  BOARD_TYPE_RPI_COMPUTE3 = 26; {Raspberry Pi Compute Module 3}
  BOARD_TYPE_RPI_ZERO_W   = 27; {Raspberry Pi Model Zero W}
+ BOARD_TYPE_RPI3B_PLUS   = 28; {Raspberry Pi 3 Model B+} 
  
 {==============================================================================}
 const 
